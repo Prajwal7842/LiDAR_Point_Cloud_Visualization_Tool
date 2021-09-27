@@ -9,12 +9,30 @@ body
 {
     height: 100vh;
     font-family: 'Poppins';
+    background: rgb(24, 24, 24)
+}
+
+body {
+    overflow-x: hidden;
 }
 
 .webgl
 {
-    position: fixed;
+    position: absolute;
     top: 0;
     left: 0;
     outline: none;
+}
+.toolbar 
+{
+    position: absolute;
+    display: block;
+    left: 1%;
+    top: 1%;
+}
+
+button {
+    position: absolute;
+    display: block;
+    z-index: 99;
 }

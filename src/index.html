@@ -4,8 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ThreeJS Starter</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+         integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 </head>
 <body>
+    <div class = "toolbar">
+        <button type="button" class="btn btn-outline-secondary" id = "openFileButton">Open File</button>
+        <input id="file-input" type="file" name="name" style="display: none;" multiple/>
+    </div>
     <canvas class="webgl"></canvas>
 </body>
 </html>
