@@ -8,10 +8,30 @@
          integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 </head>
 <body>
-    <div class = "toolbar">
-        <button type="button" class="btn btn-outline-secondary" id = "openFileButton">Open File</button>
+    <div class = "toolbar btn-group">
+        <button type="button" class="btn btn-outline-secondary btn-block" id = "openFileButton">Open File</button>
+        <button type="button" class="btn btn-outline-secondary btn-block" id = "addNewLabel">Add New Label</button>
+        <button type="button" class="btn btn-outline-secondary btn-block" id = "showBarChartButton">Show Bar Chart</button>
+        <button type = "button" class="btn btn-outline-secondary btn-block" id = "nextLabelButton">Next Label</button>
         <input id="file-input" type="file" name="name" style="display: none;" multiple/>
+        <input id="label-file-input" type="file" name="name" style="display: none;"/>
     </div>
-    <canvas class="webgl"></canvas>
+    <div style="position: relative;">
+        <canvas class="webgl"></canvas>
+        <div style = "transform: translate(50px, 800px);">
+            <h2>Data Analytics</h2> <br />
+            <svg id = "barChart" width= "600" height="500" style="position: absolute; 
+            margin : auto;
+            left: 0px; 
+            top:0px;
+            z-index: 2;
+            background-color: grey;
+            display: none;
+            "
+            ></svg>
+        </div>
+        
+    </div>
+
 </body>
 </html>

@@ -5,16 +5,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import * as dat from 'dat.gui'
 import * as utility from './utility.js'
 
-/* 
-    - Visualization (Completed)
-    - Class Colors can be changed (Completed)
-    - Add a boolean value in each gui, to display the current class or not (Completed)
-    - Add a open file button and then open file using that button. (Completed)
-*/
-
-
-
-
 // Debug
 const gui = new dat.GUI()
 
@@ -24,8 +14,18 @@ const canvas = document.querySelector('canvas.webgl')
 // Scene
 const scene = new THREE.Scene()
 
+var metaData = require('./metadata.json');
+// console.log(metaData);
+var mesh = {};
+var classData = {}; // {label -> [label_mesh]}
+var currentLabels = []; // {label}
+var currLabelNumber = 0;
+var classDistribution = {};
 // Objects
 // const particlesGeometry = new THREE.BufferGeometry();
+
+// Preprocessing Function calls
+
 
 // Utility Function
 
@@ -60,16 +60,15 @@ function generateColorArray(data) {
     return colorArray;
 }
 
-
-function generateClassInfo(groundTruth) {
-    let length = groundTruth.length;
+  
+function generateClassInfo() {
+    // console.log("IN generate class Info()");
     let colorMapping = {}
     let classes = []
-    for(let i = 0; i < length; i ++) {
-        if(!(groundTruth[i] in colorMapping)) {
-            colorMapping[groundTruth[i]] = utility.getRandomColor();
-            classes.push(groundTruth[i]);
-        }
+    for(let [key, value] of Object.entries(metaData["classCode"])) {
+        let color = metaData.classNames[value];
+        colorMapping[key] = color;
+        classes.push(value);
     }
     return {"colorMapping": colorMapping, "classes" : classes};
 }
@@ -99,56 +98,25 @@ function openSimplePointCloud(filename) {
     });
 }
 
-
-function openComplexPointCloud(data) {
-    console.log("Data", data);
-    let groundTruth = [];
-    let length = data.length;
-    for(let i = 0; i < length; i ++) {
-        groundTruth.push(parseInt(data[i].groundtruth));
+function displayMesh(label) {
+    for(const [key, value] of Object.entries(mesh[label])) {
+        scene.add(value.mesh);
     }
-    console.log(groundTruth);
-    let classData = generateClassInfo(groundTruth);
-    console.log(classData);
-    let pointCloudData = {};
-    for(let i = 0; i < length; i ++) {
-        if(!(groundTruth[i] in pointCloudData)) {
-            pointCloudData[groundTruth[i]] = {
-                x: [],
-                y: [],
-                z: [],
-                color: []
-            };
-        }
-        let color = classData.colorMapping[groundTruth[i]];
-        pointCloudData[groundTruth[i]].x.push(parseFloat(data[i].x));
-        pointCloudData[groundTruth[i]].y.push(parseFloat(data[i].y));
-        pointCloudData[groundTruth[i]].z.push(parseFloat(data[i].z));
-        pointCloudData[groundTruth[i]].color.push(color);
-    }
-    let classMesh = {};
-    for(const [key, value] of Object.entries(pointCloudData)) {
-        const posArray = generatePositionArray(value.x, value.y, value.z);
-        // const color = generateColorArray(value);
-        const color = classData.colorMapping[key];
-        const particlesMaterial = new THREE.PointsMaterial({
-            size: 0.01,
-            color: classData.colorMapping[key]
-        });
-        const particlesGeometry = new THREE.BufferGeometry();
-        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        // particlesGeometry.setAttribute('color', new THREE.BufferAttribute(color, 3));
-        const particleMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-        classMesh[key] = {
-            "mesh" : particleMesh
-        };
+    displayGUI(mesh[label]);
+}
 
-        // GUI 
-        let className = "Class_" + key;    
+function displayGUI (classMesh) {
+    let classNames = metaData.classNames;
+    // console.log(classNames);
+    let length = classNames.length;
+    for(let [key, value] of Object.entries(classNames)) {
+        let className = key;
+        let classColor = value;
+        console.log(className, classColor);
         const folder = gui.addFolder(className);
-        var initialColor = { Color : classData.colorMapping[key] };
+        var initialColor = { Color : classColor};
         var initialShow = { Show : true};
-        const finalColor = {"New Color" : "" + classData.colorMapping[key]};
+        const finalColor = {"New Color" : "" + classColor};
         // Widget to show a class mesh or not. Boolean in nature.
         folder.add(initialShow, 'Show').onChange(function(value) {
             if(value == false)
@@ -171,40 +139,251 @@ function openComplexPointCloud(data) {
                 folder.__controllers[2].setValue(classData.colorMapping[key]);
             }
         });
-        // console.log(folder.__controllers[1].setValue('#000000'));
-    }
-    for(const [key, value] of Object.entries(classMesh)) {
-        scene.add(value.mesh);
     }
 }
 
+function storeClassDistribution(data, className) {
+    console.log(data);
+    let length = data.length;
+    let classDistribution = {}
+    for(let i = 0; i < length; i ++) {
+        let key = data[i][className];
+        if(key in classDistribution) classDistribution[key] += 1;
+        else classDistribution[key] = 1;
+    }
+    return classDistribution;
+}
+
+function getClassDistribution() {
+    var labelClassDistribution = [];
+    let labelName = currentLabels[currLabelNumber];
+    let total = 0.0;
+    for(let [key, value] of Object.entries(classDistribution[labelName])) {
+        total += value;
+    }
+    for(let [key, value] of Object.entries(classDistribution[labelName])) {
+        console.log(value);
+        labelClassDistribution.push({
+            "class" : key,
+            "value" : (value / total) * 100.0
+        });
+    }
+    console.log(labelName, labelClassDistribution);
+    return labelClassDistribution;
+}
+
+function addNewLabel(data, label) {
+    currentLabels.push(label);
+    console.log(label);
+    let labelData = [];
+    let length = data.length;
+    for(let i = 0; i < length; i ++) {
+        labelData.push(parseInt(data[i][label]));
+    }
+    console.log(labelData);
+    let pointCloudData = {};
+    for(let i = 0; i < length; i ++) {
+        if(!(labelData[i] in pointCloudData)) {
+            pointCloudData[labelData[i]] = {
+                x: [],
+                y: [],
+                z: [],
+                color: []
+            };
+        }
+        // let classData = generateClassInfo();
+        let color = classData.colorMapping[labelData[i]];
+        if(data[i].x != NaN && data[i].y != NaN && data[i].z != NaN) {
+            pointCloudData[labelData[i]].x.push(parseFloat(data[i].x));
+            pointCloudData[labelData[i]].y.push(parseFloat(data[i].y));
+            pointCloudData[labelData[i]].z.push(parseFloat(data[i].z));
+            pointCloudData[labelData[i]].color.push(color);
+        }
+    }
+    console.log(label,pointCloudData);
+    // FulFill Class Distribution Variable of current label.
+    var labelClassDistribution = {}; // To store the class distribution of current label.
+    for(const [key, value] of Object.entries(pointCloudData)) {
+        labelClassDistribution[key] = value.x.length;
+    }
+    // console.log(labelClassDistribution);
+    classDistribution[label] = labelClassDistribution; // Store the current label class distribution in global variable.
+    
+    let classMesh = {};
+    for(const [key, value] of Object.entries(pointCloudData)) {
+        // console.log(key, value);
+        let className = metaData["classCode"][key];
+        const posArray = generatePositionArray(value.x, value.y, value.z);
+        // const color = generateColorArray(value);
+        
+        const color = classData.colorMapping[key];
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.01,
+            color: classData.colorMapping[key]
+        });
+        const particlesGeometry = new THREE.BufferGeometry();
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        // particlesGeometry.setAttribute('color', new THREE.BufferAttribute(color, 3));
+        const particleMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        classMesh[className] = {
+            "mesh" : particleMesh
+        };
+    }
+    // console.log(classMesh);
+    mesh[label] = classMesh;
+    // for(const [key, value] of Object.entries(classMesh)) {
+    //     scene.add(value.mesh);
+    // }
+}
+
+function openComplexPointCloud(data) {
+    console.log("Data", data);
+    let labels = metaData.labels;
+    labels.forEach(function(label) {
+        if(!(label in data[0])) {
+            return ;
+        }
+        addNewLabel(data, label);
+    })
+    
+    
+    // console.log(groundTruth);
+}
+
+// Event Listener for Next Label Button
+const nextLabelButton = document.getElementById("nextLabelButton");
+nextLabelButton.addEventListener('click', (event) => {
+    for(const [key, value] of Object.entries(mesh[currentLabels[currLabelNumber]])) {
+        scene.remove(value.mesh);
+    }
+    currLabelNumber += 1;
+    currLabelNumber %= (currentLabels.length);
+    for(const [key, value] of Object.entries(mesh[currentLabels[currLabelNumber]])) {
+        scene.add(value.mesh);
+    }
+});
+
+// Get class Data
+classData = generateClassInfo();
 
 // GUI Code Begin
 // GUI Button Utility function
+let parsedData = [];
+let currValueCount = [];
+let currData = undefined, currClassDistribution;
+
+// Function : Open File Button : Code Begin
 const openFileButton = document.getElementById("openFileButton");
 const fileInput = document.getElementById('file-input');
 openFileButton.addEventListener('click', (event) => {
     fileInput.click();
 });
-let parsedData = [];
 fileInput.addEventListener('change', (event) => {
     let fileList = event.target.files;
     let len = fileList.length;
     for(let i = 0; i < len; i ++) {
-        console.log(fileList[i]);
+        // console.log(fileList[i]);
         var reader = new FileReader();
         reader.readAsText(fileList[i],'UTF-8');
         reader.onload = readerEvent => {
-            var content = readerEvent.target.result;
+            let content = readerEvent.target.result;
             let data = d3.csvParse(content);
+            currData = data;
             openComplexPointCloud(data);
-            console.log(fileList[i].name);
+            displayMesh(currentLabels[0]);
+            // console.log(fileList[i].name);
             let obj = {};
             obj[fileList[i].name] = data;
+            
             parsedData.push(obj);
         }
     }
 });
+// Function : Open File Button : Code Ends
+
+// Function : Add New Label : Code Begin
+const newLabelButton = document.getElementById("addNewLabel");
+const labelFileInput = document.getElementById("label-file-input");
+newLabelButton.addEventListener('click', (event) => {
+    if(currData == undefined) {
+        alert("Error : No Input Data File Found!");
+    }
+    else {
+        labelFileInput.click();
+    }
+});
+
+labelFileInput.addEventListener('change', (event) => {
+    let file = event.target.files[0];
+    var reader = new FileReader();
+    reader.readAsText(file,'UTF-8');
+    reader.onload = readerEvent => {
+        let content = readerEvent.target.result;
+        let data = d3.csvParse(content);
+        // console.log(file.name);
+        console.log("Label File Data : ", data);
+        if(currData.length != data.length) {
+            alert("Label Data has missing values !");
+        }
+        else {
+            let length = data.length;
+
+            console.log("CurrData", currData);
+            for(let i = 0; i < length; i ++) {
+                
+                for(let [key, value] of Object.entries(data[i])) {
+                    currData[i][key] = value;
+                }
+            }
+            let labels = Object.keys(data[0]);
+            labels.forEach(function(newLabel) {
+                addNewLabel(currData, newLabel);
+            });
+        }
+    }
+})
+// Function : Add New Label : Code End
+
+
+// Function : Display Bar Chart : Code Begin 
+const showBarChartButton = document.getElementById("showBarChartButton");
+showBarChartButton.addEventListener('click', (event) => {
+    let barCharData = getClassDistribution();
+    document.getElementById("barChart").style.display = "block";
+    function render(data) {
+        var svg = d3.select("svg");
+        svg.selectAll("*").remove();
+        let margin = {top : 20, bottom : 20, left : 80, right : 20};
+        var width = svg.attr("width") - margin.left - margin.right;
+        var height = svg.attr("height") - margin.top - margin.bottom;
+        let yAxisLabel = d => metaData.classCode[d.class];
+        let xScale = d3.scaleLinear()
+                        .domain([0, 100])
+                        .range([0, width]);
+        
+        let yScale = d3.scaleBand()
+                        .domain(data.map(yAxisLabel))
+                        .range([0, height]).padding(0.1);
+        let yAxis = d3.axisLeft(yScale);
+        var g = svg.append("g")
+                    .attr("transform", `translate(${margin.left}, ${margin.top})`);
+        g.append("g").call(d3.axisLeft(yScale));
+        g.append("g").call(d3.axisBottom(xScale))
+                .attr("transform", `translate(0, ${height})`);
+        g.selectAll('rect')
+            .data(data)
+            .enter()
+            .append('rect')
+                .attr('y', d => yScale(yAxisLabel(d)))
+                .attr('width', d => xScale(d.value))
+                .attr('height', yScale.bandwidth())
+                .attr('fill', d => metaData.classNames[metaData.classCode[d.class]]);
+        
+    }
+    render(barCharData);
+});
+// Function : Display Bar chart : Code End
+
 
 // GUI Code End
 // openSimplePointCloud("./data.csv")

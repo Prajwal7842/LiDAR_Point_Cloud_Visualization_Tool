@@ -36,3 +36,8 @@ button {
     display: block;
     z-index: 99;
 }
+
+
+text {
+    font-size : 1.4em;
+}

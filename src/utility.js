@@ -25,7 +25,20 @@ export function normalize(arr) {
 	return arr;
 }
 
+
 export function verifyColorCode(colorCode) {
+	// Check if the color input by user, represents a valid hex color code or not.
 	var RegExp = /(^#[0-9A-F]{6}$)|(^#[0-9A-F]{3}$)/i;
 	return RegExp.test(colorCode);
 }
+
+export function generateClassInfo(groundTruth) {
+    let length = groundTruth.length;
+    let colorMapping = {}
+    let classes = []
+    for(let i = 0; i < length; i ++) {
+        classes.push(groundTruth[i]);
+    }
+    return {"colorMapping": colorMapping, "classes" : classes};
+}
+

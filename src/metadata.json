@@ -1,0 +1,51 @@
+{
+    "labels" : [
+        "groundtruth",
+        "intensity",
+        "predictions"
+    ],
+    "classNames" : {
+        "Car" : "#03bafc",
+        "Bicycle" : "#03fcf8",
+        "Motorcycle" : "#0303fc",
+        "Truck" : "#9d03fc",
+        "Other Vehicles" : "#4103fc",
+        "Person" : "#fc0335",
+        "Bicyclist" : "#fc03f0",
+        "Motorcyclist" : "#fc6f03",
+        "Road" : "#fc03a5",
+        "Parking" : "#e095e8",
+        "Sidewalk" : "#360745",
+        "Other Ground" : "#7d0e35",
+        "Building" : "#ffea03",
+        "Fence" : "#ff7903",
+        "Vegetation" : "#03ff2d",
+        "Trunk" : "#632602",
+        "Terrain" : "#adde0b",
+        "Pole" : "#dade78",
+        "Traffic Sign" : "#b50909",
+        "Unlabeled" : "#ffffff"
+    },
+    "classCode" : {
+        "0" : "Car",
+        "1" : "Bicycle",
+        "2" : "Motorcycle",
+        "3" : "Truck",
+        "4" : "Other Vehicles",
+        "5" : "Person",
+        "6" : "Bicyclist",
+        "7" : "Motorcyclist",
+        "8" : "Road",
+        "9" : "Parking",
+        "10" : "Sidewalk",
+        "11" : "Other Ground",
+        "12" : "Building",
+        "13" : "Fence",
+        "14" : "Vegetation",
+        "15" : "Trunk",
+        "16" : "Terrain",
+        "17" : "Pole",
+        "18" : "Traffic Sign",
+        "19" : "Unlabeled"
+    }
+}
