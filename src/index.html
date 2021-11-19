@@ -12,12 +12,14 @@
         <button type="button" class="btn btn-outline-secondary btn-block" id = "openFileButton">Open File</button>
         <button type="button" class="btn btn-outline-secondary btn-block" id = "addNewLabel">Add New Label</button>
         <button type="button" class="btn btn-outline-secondary btn-block" id = "showBarChartButton">Show Bar Chart</button>
+        <button type="button" class="btn btn-outline-secondary btn-block" id = "showConfusionMatrix">Show Confusion Matrix</button>
         <button type = "button" class="btn btn-outline-secondary btn-block" id = "nextLabelButton">Next Label</button>
-        <input id="file-input" type="file" name="name" style="display: none;" multiple/>
+        <input id="file-input" type="file" name="name" style="display: none;"/>
         <input id="label-file-input" type="file" name="name" style="display: none;"/>
     </div>
     <div style="position: relative;">
         <canvas class="webgl"></canvas>
+        <h4 id="currentLabelName" style="position: absolute; z-index=3; color: rgb(33, 47, 173); left: 40%">No data</h4> 
         <div style = "transform: translate(50px, 800px);">
             <h2>Data Analytics</h2> <br />
             <svg id = "barChart" width= "600" height="500" style="position: absolute; 
@@ -25,13 +27,16 @@
             left: 0px; 
             top:0px;
             z-index: 2;
-            background-color: grey;
+            background-color: rgb(219, 213, 213);
             display: none;
             "
             ></svg>
+        </div> 
+        <div style = "transform: translate(50px, 1200px);">
+            <div id="dataView"></div>
+            <div style="display:inline-block; float:left" id="container"></div>
+            <div style="display:inline-block; float:left" id="legend"></div>
         </div>
-        
     </div>
-
 </body>
 </html>

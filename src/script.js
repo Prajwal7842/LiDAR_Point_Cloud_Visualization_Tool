@@ -6,8 +6,17 @@ import * as dat from 'dat.gui'
 import * as utility from './utility.js'
 
 // Debug
-const gui = new dat.GUI()
-
+const gui = new dat.GUI();
+dat.GUI.prototype.removeFolder = function(name) {
+    var folder = this.__folders[name];
+    if (!folder) {
+        return;
+    }
+    folder.close();
+    this.__ul.removeChild(folder.domElement.parentNode);
+    delete this.__folders[name];
+    this.onResize();
+}
 // Canvas
 const canvas = document.querySelector('canvas.webgl')
 
@@ -15,25 +24,16 @@ const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
 var metaData = require('./metadata.json');
-// console.log(metaData);
 var mesh = {};
 var classData = {}; // {label -> [label_mesh]}
 var currentLabels = []; // {label}
 var currLabelNumber = 0;
 var classDistribution = {};
 // Objects
-// const particlesGeometry = new THREE.BufferGeometry();
-
-// Preprocessing Function calls
 
 
 // Utility Function
-
-
 function generatePositionArray(X, Y, Z) {
-    X = utility.normalize(X);
-    Y = utility.normalize(Y);
-    Z = utility.normalize(Z);
     let length = X.length;
     let index = 0;
     const posArray = new Float32Array(length * 3);
@@ -46,23 +46,7 @@ function generatePositionArray(X, Y, Z) {
     return posArray;
 }
 
-function generateColorArray(data) {
-    let length = data.color.length;
-    const colorArray = new Float32Array(length * 3);
-    let index = 0;
-    for(let i = 0; i < length; i ++) {
-        // Convert hex into rgb
-        var aRgbHex = data.color[i].match(/.{1,2}/g);
-        colorArray[index ++] = parseInt(aRgbHex[0], 16)/255;
-        colorArray[index ++] = parseInt(aRgbHex[1], 16)/255;
-        colorArray[index ++] = parseInt(aRgbHex[2], 16)/255;
-    }
-    return colorArray;
-}
-
-  
 function generateClassInfo() {
-    // console.log("IN generate class Info()");
     let colorMapping = {}
     let classes = []
     for(let [key, value] of Object.entries(metaData["classCode"])) {
@@ -73,32 +57,8 @@ function generateClassInfo() {
     return {"colorMapping": colorMapping, "classes" : classes};
 }
 
-
-function openSimplePointCloud(filename) {
-    d3.csv(filename).then(function(data) {
-        let X = []
-        let Y = []
-        let Z = []
-        let length = data.length;
-        for(let i = 0; i < length; i ++) {
-            X.push(parseFloat(data[i].x));
-            Y.push(parseFloat(data[i].y));
-            Z.push(parseFloat(data[i].z));
-        }
-        const particlesGeometry = new THREE.BufferGeometry();
-        const particlesMaterial = new THREE.PointsMaterial({
-            size: 0.01,
-            color: 'white'
-        });
-        let posArray = generatePositionArray(X, Y, Z);
-        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        const particleMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-        console.log(particleMesh);
-        scene.add(particleMesh);
-    });
-}
-
 function displayMesh(label) {
+    document.getElementById("currentLabelName").innerHTML = `Current Label : ${label}`;
     for(const [key, value] of Object.entries(mesh[label])) {
         scene.add(value.mesh);
     }
@@ -107,12 +67,12 @@ function displayMesh(label) {
 
 function displayGUI (classMesh) {
     let classNames = metaData.classNames;
-    // console.log(classNames);
-    let length = classNames.length;
+    for(let [key, _] of Object.entries(classNames)) {
+        gui.removeFolder(key);
+    }
     for(let [key, value] of Object.entries(classNames)) {
         let className = key;
         let classColor = value;
-        console.log(className, classColor);
         const folder = gui.addFolder(className);
         var initialColor = { Color : classColor};
         var initialShow = { Show : true};
@@ -142,45 +102,54 @@ function displayGUI (classMesh) {
     }
 }
 
-function storeClassDistribution(data, className) {
-    console.log(data);
-    let length = data.length;
-    let classDistribution = {}
-    for(let i = 0; i < length; i ++) {
-        let key = data[i][className];
-        if(key in classDistribution) classDistribution[key] += 1;
-        else classDistribution[key] = 1;
-    }
-    return classDistribution;
-}
-
 function getClassDistribution() {
     var labelClassDistribution = [];
     let labelName = currentLabels[currLabelNumber];
     let total = 0.0;
-    for(let [key, value] of Object.entries(classDistribution[labelName])) {
+    for(let [_, value] of Object.entries(classDistribution[labelName])) {
         total += value;
     }
     for(let [key, value] of Object.entries(classDistribution[labelName])) {
-        console.log(value);
         labelClassDistribution.push({
             "class" : key,
             "value" : (value / total) * 100.0
         });
     }
-    console.log(labelName, labelClassDistribution);
     return labelClassDistribution;
 }
 
-function addNewLabel(data, label) {
+function addNewLabel(data, label, isNormalize = false) {
+    // Function to add a new Label to the existing point cloud. This is also used to draw initial layout.
     currentLabels.push(label);
-    console.log(label);
-    let labelData = [];
+    let labelData = [], X = [], Y = [], Z = [];
     let length = data.length;
     for(let i = 0; i < length; i ++) {
         labelData.push(parseInt(data[i][label]));
+        X.push(parseFloat(data[i].x));
+        Y.push(parseFloat(data[i].y));
+        Z.push(parseFloat(data[i].z));
     }
-    console.log(labelData);
+    if(isNormalize == false) {
+        X = utility.normalize(X);
+        Y = utility.normalize(Y);
+        Z = utility.normalize(Z);
+    }
+    for(let i = 0; i < length; i ++) {
+        let x = "" + X[i];
+        let y = "" + Y[i];
+        let z = "" + Z[i];
+        if(!(x in propertise)) {
+            propertise[x] = {};
+        }
+        if(!(y in propertise[x])) {
+            propertise[x][y] = {};
+        }
+        if(!(z in propertise[x][y])) {
+            propertise[x][y][z] = {};
+        }
+        if(parseInt(data[i][label]) == NaN) continue;
+        propertise[x][y][z][label] = parseInt(data[i][label]);
+    }
     let pointCloudData = {};
     for(let i = 0; i < length; i ++) {
         if(!(labelData[i] in pointCloudData)) {
@@ -191,76 +160,79 @@ function addNewLabel(data, label) {
                 color: []
             };
         }
-        // let classData = generateClassInfo();
         let color = classData.colorMapping[labelData[i]];
-        if(data[i].x != NaN && data[i].y != NaN && data[i].z != NaN) {
-            pointCloudData[labelData[i]].x.push(parseFloat(data[i].x));
-            pointCloudData[labelData[i]].y.push(parseFloat(data[i].y));
-            pointCloudData[labelData[i]].z.push(parseFloat(data[i].z));
+        if(X[i] != NaN && Y[i] != NaN && Z[i].z != NaN) {
+            pointCloudData[labelData[i]].x.push(X[i]);
+            pointCloudData[labelData[i]].y.push(Y[i]);
+            pointCloudData[labelData[i]].z.push(Z[i]);
             pointCloudData[labelData[i]].color.push(color);
         }
     }
-    console.log(label,pointCloudData);
     // FulFill Class Distribution Variable of current label.
     var labelClassDistribution = {}; // To store the class distribution of current label.
     for(const [key, value] of Object.entries(pointCloudData)) {
         labelClassDistribution[key] = value.x.length;
     }
-    // console.log(labelClassDistribution);
     classDistribution[label] = labelClassDistribution; // Store the current label class distribution in global variable.
     
     let classMesh = {};
     for(const [key, value] of Object.entries(pointCloudData)) {
-        // console.log(key, value);
         let className = metaData["classCode"][key];
         const posArray = generatePositionArray(value.x, value.y, value.z);
-        // const color = generateColorArray(value);
         
-        const color = classData.colorMapping[key];
         const particlesMaterial = new THREE.PointsMaterial({
             size: 0.01,
             color: classData.colorMapping[key]
         });
         const particlesGeometry = new THREE.BufferGeometry();
         particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        // particlesGeometry.setAttribute('color', new THREE.BufferAttribute(color, 3));
         const particleMesh = new THREE.Points(particlesGeometry, particlesMaterial);
         classMesh[className] = {
             "mesh" : particleMesh
         };
     }
-    // console.log(classMesh);
     mesh[label] = classMesh;
-    // for(const [key, value] of Object.entries(classMesh)) {
-    //     scene.add(value.mesh);
-    // }
 }
 
 function openComplexPointCloud(data) {
-    console.log("Data", data);
+    // Function to draw initial point cloud when a file is loaded.
     let labels = metaData.labels;
+    let length = data.length;
+    let X = [],  Y = [], Z = [];
+    for(let i = 0; i < length; i += 1) {
+        X.push(parseFloat(data[i].x));
+        Y.push(parseFloat(data[i].y));
+        Z.push(parseFloat(data[i].z));
+    }
+    X = utility.normalize(X);
+    Y = utility.normalize(Y);
+    Z = utility.normalize(Z);
+    for(let i = 0; i < length; i += 1) {
+        data[i].x = X[i];
+        data[i].y = Y[i];
+        data[i].z = Z[i];
+    }
     labels.forEach(function(label) {
         if(!(label in data[0])) {
             return ;
         }
-        addNewLabel(data, label);
+        addNewLabel(data, label, true);
     })
-    
-    
-    // console.log(groundTruth);
 }
 
 // Event Listener for Next Label Button
 const nextLabelButton = document.getElementById("nextLabelButton");
-nextLabelButton.addEventListener('click', (event) => {
-    for(const [key, value] of Object.entries(mesh[currentLabels[currLabelNumber]])) {
+nextLabelButton.addEventListener('click', () => {
+    for(const [_, value] of Object.entries(mesh[currentLabels[currLabelNumber]])) {
         scene.remove(value.mesh);
     }
     currLabelNumber += 1;
     currLabelNumber %= (currentLabels.length);
-    for(const [key, value] of Object.entries(mesh[currentLabels[currLabelNumber]])) {
+    document.getElementById("currentLabelName").innerHTML = `Current Label : ${currentLabels[currLabelNumber]}`;
+    for(const [_, value] of Object.entries(mesh[currentLabels[currLabelNumber]])) {
         scene.add(value.mesh);
     }
+    displayGUI(mesh[currentLabels[currLabelNumber]]);
 });
 
 // Get class Data
@@ -269,8 +241,8 @@ classData = generateClassInfo();
 // GUI Code Begin
 // GUI Button Utility function
 let parsedData = [];
-let currValueCount = [];
-let currData = undefined, currClassDistribution;
+let currData = undefined;
+let propertise = {};
 
 // Function : Open File Button : Code Begin
 const openFileButton = document.getElementById("openFileButton");
@@ -282,7 +254,6 @@ fileInput.addEventListener('change', (event) => {
     let fileList = event.target.files;
     let len = fileList.length;
     for(let i = 0; i < len; i ++) {
-        // console.log(fileList[i]);
         var reader = new FileReader();
         reader.readAsText(fileList[i],'UTF-8');
         reader.onload = readerEvent => {
@@ -291,7 +262,6 @@ fileInput.addEventListener('change', (event) => {
             currData = data;
             openComplexPointCloud(data);
             displayMesh(currentLabels[0]);
-            // console.log(fileList[i].name);
             let obj = {};
             obj[fileList[i].name] = data;
             
@@ -320,24 +290,14 @@ labelFileInput.addEventListener('change', (event) => {
     reader.onload = readerEvent => {
         let content = readerEvent.target.result;
         let data = d3.csvParse(content);
-        // console.log(file.name);
-        console.log("Label File Data : ", data);
         if(currData.length != data.length) {
             alert("Label Data has missing values !");
         }
         else {
-            let length = data.length;
-
-            console.log("CurrData", currData);
-            for(let i = 0; i < length; i ++) {
-                
-                for(let [key, value] of Object.entries(data[i])) {
-                    currData[i][key] = value;
-                }
-            }
             let labels = Object.keys(data[0]);
             labels.forEach(function(newLabel) {
-                addNewLabel(currData, newLabel);
+                if(newLabel != "x" && newLabel != "y" && newLabel != "z")
+                    addNewLabel(data, newLabel);
             });
         }
     }
@@ -380,24 +340,242 @@ showBarChartButton.addEventListener('click', (event) => {
                 .attr('fill', d => metaData.classNames[metaData.classCode[d.class]]);
         
     }
+    if(currData == undefined) {
+        alert("Error : No Input Data File Found!");
+        return ;
+    }
     render(barCharData);
 });
 // Function : Display Bar chart : Code End
 
+// Function : Confusion Matrix : Code Begin
+const showConfusionMatrix = document.getElementById("showConfusionMatrix");
+showConfusionMatrix.addEventListener('click', () => {
+    function render(confusionMatrix, classes) {
+		Matrix({
+			container : '#container',
+			data      : confusionMatrix,
+			labels    : classes,
+            start_color : '#ffffff',
+            end_color : '#e67e22'
+		});
+
+		// rendering the table
+        function Matrix(options) {
+            // Main
+            var margin = {top: 50, right: 100, bottom: 100, left: 100};
+            var width = 700,
+            height = 700,
+            data = options.data,
+            container = options.container,
+            labelsData = options.labels,
+            startColor = options.start_color,
+            endColor = options.end_color;
+
+            var widthLegend = 100;
+
+            if(!data){
+                throw new Error('Please pass data');
+            }
+
+            if(!Array.isArray(data) || !data.length || !Array.isArray(data[0])){
+                throw new Error('It should be a 2-D array');
+            }
+
+            var maxValue = d3.max(data, function(layer) { return d3.max(layer, function(d) { return d; }); });
+            var minValue = d3.min(data, function(layer) { return d3.min(layer, function(d) { return d; }); });
+
+            var numrows = data.length;
+            var numcols = data[0].length;
+            d3.select(container).selectAll("*").remove();
+            d3.select("#legend").selectAll("*").remove();
+            var svg = d3.select(container).append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+            var background = svg.append("rect")
+                .style("stroke", "black")
+                .style("stroke-width", "2px")
+                .attr("width", width)
+                .attr("height", height);
+
+            var x = d3.scaleBand()
+                .domain(d3.range(numcols))
+                .range([0, width]);
+
+            var y = d3.scaleBand()
+                .domain(d3.range(numrows))
+                .range([0, height]);
+
+            var colorMap = d3.scaleLinear()
+                .domain([minValue,maxValue])
+                .range([startColor, endColor]);
+
+            var row = svg.selectAll(".row")
+                .data(data)
+                .enter().append("g")
+                .attr("class", "row")
+                .attr("transform", function(d, i) { return "translate(0," + y(i) + ")"; });
+
+            var cell = row.selectAll(".cell")
+                .data(function(d) { return d; })
+                    .enter().append("g")
+                .attr("class", "cell")
+                .attr("transform", function(d, i) { return "translate(" + x(i) + ", 0)"; });
+
+            cell.append('rect')
+                .attr("width", x.bandwidth())
+                .attr("height", y.bandwidth())
+                .style("stroke-width", 0);
+
+            cell.append("text")
+                .attr("dy", ".32em")
+                .attr("x", x.bandwidth() / 2)
+                .attr("y", y.bandwidth() / 2)
+                .attr("text-anchor", "middle")
+                .style("fill", function(d, i) { return d >= maxValue/2 ? 'white' : 'black'; })
+                .text(function(d, i) { return d; });
+
+            row.selectAll(".cell")
+                .data(function(d, i) { return data[i]; })
+                .style("fill", colorMap);
+
+            var labels = svg.append('g')
+                .attr('class', "labels");
+
+            var columnLabels = labels.selectAll(".column-label")
+                .data(labelsData)
+                .enter().append("g")
+                .attr("class", "column-label")
+                .attr("transform", function(d, i) { return "translate(" + x(i) + "," + height * 1.02 + ")"; });
+
+            columnLabels.append("line")
+                .style("stroke", "black")
+                .style("stroke-width", "1px")
+                .attr("x1", x.bandwidth() / 2)
+                .attr("x2", x.bandwidth() / 2)
+                .attr("y1", 0)
+                .attr("y2", 5);
+
+            columnLabels.append("text")
+                .attr("x", 30)
+                .attr("y", y.bandwidth() / 2)
+                .attr("dy", ".22em")
+                .attr("text-anchor", "end")
+                .attr("transform", "rotate(-60)")
+                .text(function(d, i) { return d; });
+
+            var rowLabels = labels.selectAll(".row-label")
+                .data(labelsData)
+            .enter().append("g")
+                .attr("class", "row-label")
+                .attr("transform", function(d, i) { return "translate(" + 0 + "," + y(i) + ")"; });
+
+            rowLabels.append("line")
+                .style("stroke", "black")
+                .style("stroke-width", "1px")
+                .attr("x1", 0)
+                .attr("x2", -5)
+                .attr("y1", y.bandwidth() / 2)
+                .attr("y2", y.bandwidth() / 2);
+
+            rowLabels.append("text")
+                .attr("x", -8)
+                .attr("y", y.bandwidth() / 2)
+                .attr("dy", ".32em")
+                .attr("text-anchor", "end")
+                .text(function(d, i) { return d; });
+
+            var key = d3.select("#legend")
+            .append("svg")
+            .attr("width", widthLegend)
+            .attr("height", height + margin.top + margin.bottom);
+
+            var legend = key
+            .append("defs")
+            .append("svg:linearGradient")
+            .attr("id", "gradient")
+            .attr("x1", "100%")
+            .attr("y1", "0%")
+            .attr("x2", "100%")
+            .attr("y2", "100%")
+            .attr("spreadMethod", "pad");
+
+            legend
+            .append("stop")
+            .attr("offset", "0%")
+            .attr("stop-color", endColor)
+            .attr("stop-opacity", 1);
+
+            legend
+            .append("stop")
+            .attr("offset", "100%")
+            .attr("stop-color", startColor)
+            .attr("stop-opacity", 1);
+
+            key.append("rect")
+            .attr("width", widthLegend/2-10)
+            .attr("height", height)
+            .style("fill", "url(#gradient)")
+            .attr("transform", "translate(0," + margin.top + ")");
+
+            var y = d3.scaleLinear()
+            .range([height, 0])
+            .domain([minValue, maxValue]);
+
+            var yAxis = d3.axisRight(y)
+
+            key.append("g")
+            .attr("class", "y axis")
+            .attr("transform", "translate(41," + margin.top + ")")
+            .call(yAxis)
+
+        }
+
+    }
+    if(currData == undefined) {
+        alert("Error : No Input Data File Found!");
+        return ;
+    }
+    var classes = [];
+    var classIndex = {};
+    let index = 0;
+    for(let [key, _] of Object.entries(metaData.classNames)) {
+        classes.push(key);
+        classIndex[key] = index;
+        index ++;
+    }
+    var confusionMatrix = new Array(classes.length).fill(0).map(() => new Array(classes.length).fill(0));
+    var actualData = prompt("Enter Actual Data Label Name : ");
+    if(!currentLabels.includes(actualData)) {
+        alert("Actual Data Label is not present");
+        return ;
+    }
+    var predictedData = prompt("Enter Prediction Data Label Name : ");
+    if(!currentLabels.includes(predictedData)) {
+        alert("Predicted Data Label is not present");
+        return ;
+    }
+    for(let [_, valueX] of Object.entries(propertise)) {
+        for(let [_, valueY] of Object.entries(valueX)) {
+            for(let [_, valueZ] of Object.entries(valueY)) {
+                if(actualData in valueZ && predictedData in valueZ) {
+                    let rowNumber = parseInt(classIndex[metaData.classCode[valueZ[actualData]]]);
+                    let colNumber = parseInt(classIndex[metaData.classCode[valueZ[predictedData]]]);
+                    confusionMatrix[rowNumber][colNumber] += 1;
+                }
+            }
+        }
+    }
+    render(confusionMatrix, classes)
+});
+// Function : Confusion Matrix : Code End
 
 // GUI Code End
-// openSimplePointCloud("./data.csv")
-// openComplexPointCloud("./data.csv")
-
-
-
-
-
-// Mesh
-
 
 // Lights
-
 const pointLight = new THREE.PointLight(0xffffff, 0.1)
 pointLight.position.x = 2
 pointLight.position.y = 3
@@ -449,7 +627,7 @@ const renderer = new THREE.WebGLRenderer({
 })
 renderer.setSize(sizes.width, sizes.height)
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-
+renderer.setClearColor( 0xffffff, metaData.lightMode);
 /**
  * Animate
  */
@@ -463,8 +641,6 @@ const tick = () =>
 
     // Update objects
 
-    // Update Orbital Controls
-    // controls.update()
 
     // Render
     renderer.render(scene, camera);
@@ -474,5 +650,3 @@ const tick = () =>
 }
 
 tick()
-
-

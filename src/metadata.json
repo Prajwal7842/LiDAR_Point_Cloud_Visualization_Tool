@@ -47,5 +47,6 @@
         "17" : "Pole",
         "18" : "Traffic Sign",
         "19" : "Unlabeled"
-    }
+    },
+    "lightMode" : "1"
 }
