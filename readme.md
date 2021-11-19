@@ -1,5 +1,15 @@
 ## Setup
 Download [Node.js](https://nodejs.org/en/download/).
+
+Clone the repo :
+```bash
+git clone git@github.com:Prajwal7842/LiDAR_Point_Cloud_Visualization_Tool.git
+```
+
+Move into the folder : 
+```bash
+cd LiDAR_Point_Cloud_Visualization_Tool
+```
 Run this followed commands:
 
 ``` bash
